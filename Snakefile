@@ -3,12 +3,17 @@ import os.path
 
 configfile: "config.yaml"
 
+# create a dict of stratification names and paths
 stratification_map = {}
+# strat region tsv contains mappings of names to files
 with open(config["stratification_region_tsv"]) as fh:
   for line in fh:
     name, strat_bed = line.rstrip().split('\t')
     stratification_map[name] = config["stratification_bed_dir"] + '/' + strat_bed
 
+
+# define all desired output files
+# this script also computes switch errors
 def get_all_output_files():
   '''
   Find all of the expected outputs
@@ -26,6 +31,8 @@ def get_all_output_files():
   print(expected_files)
   return expected_files
 
+
+# targets rule
 rule all:
   input:
     all_outputs = get_all_output_files()
@@ -95,7 +102,7 @@ rule generate_var_files:
 rule calculate_switch_errs:
     input:
         varfile = "synthetic_var_files/{sample}/{truth_hap}/{ref_name}/paftools_calls.var",
-        vcf = "synthetic_binned_truth_vcf_annotated/{sample}/{ref_name}/calls.vcf.gz" 
+        vcf = "synthetic_binned_truth_vcf_annotated/{sample}/{ref_name}/calls.vcf.gz"
     output:
         switches = "switch_error_logs/{sample}/{truth_hap}/{ref_name}/switch_results.txt"
     shell:
@@ -271,6 +278,7 @@ rule get_filter_list:
     {input.bcftools} view -h {input.annotated_truth_vcf} | grep "^##FILTER" | sed -e 's/^##FILTER=<ID=//' -e 's/,Description=.*$//' > {output.filter_list}
     """
 
+# The filters used are the labels of calls, TP-HET-SWITCH, HET_AS_HOM_HAPA_FP, etc.
 rule filter_stratified:
   input:
     stratification_bed = lambda wildcards: stratification_map[wildcards.stratificaiton_name],
@@ -290,6 +298,7 @@ rule filter_stratified:
     {input.bcftools} view -T {input.stratification_bed} {input.annotated_truth_vcf} | {input.sentieon} util vcfconvert - $outdir/stratified.vcf.gz
     """
 
+
 def get_count_vcf(wildcards):
   '''
   Find the stratified VCF from the wildcards
@@ -299,6 +308,8 @@ def get_count_vcf(wildcards):
   else:
     return "synthetic_stratified_vcf/" + wildcards.sample + '/' + wildcards.ref_name + '/' + wildcards.stratificaiton_name + "/stratified.vcf.gz"
 
+
+# Count the number of variants in each stratified VCF
 rule count_filters:
   input:
     filter_list = "synthetic_filters/{sample}/{ref_name}/filters.txt",
@@ -342,4 +353,3 @@ rule counts_to_table:
     mkdir -p $outdir
     python3 {input.stratification_to_table} $(dirname $(dirname {input.all_counts_files[0]})) > {output.stratified_counts_table}
     """
-
