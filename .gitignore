@@ -1,0 +1,14 @@
+Quast*/
+Assembly/
+stratified*/
+synthetic*/
+*.log
+snakemake.err.txt
+.snakemake/
+Bed_Coverage_Testing*/
+Sentieon_Strat*/
+*.vcf*
+switch_error_logs/
+get_variants_for_bed_test.py
+aligns_out.txt
+
